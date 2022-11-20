@@ -8,12 +8,12 @@ using System.IO;
 namespace BitStreams
 {
     /// <summary>
-    /// Stream wrapper to use bit-level operations
+    /// Stream wrapper to use Bit-level operations
     /// </summary>
     public class BitStream
     {
-        private long offset { get; set; }
-        private int bit { get; set; }
+        public long Offset { get; set; }
+        public int Bit { get; set; }
         private bool MSB { get; set; }
         private Stream stream;
         private Encoding encoding;
@@ -35,24 +35,24 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Get the current bit position in the stream
+        /// Get the current Bit position in the stream
         /// </summary>
         public long BitPosition
         {
             get
             {
-                return bit;
+                return Bit;
             }
         }
 
         /// <summary>
-        /// Check if <see cref="BitStream"/> offset is inside the stream length
+        /// Check if <see cref="BitStream"/> Offset is inside the stream length
         /// </summary>
-        private bool ValidPosition
+        public bool ValidPosition
         {
             get
             {
-                return offset < Length;
+                return Offset < Length;
             }
         }
 
@@ -68,8 +68,8 @@ namespace BitStreams
             this.stream = new MemoryStream();
             stream.CopyTo(this.stream);
             this.MSB = MSB;
-            offset = 0;
-            bit = 0;
+            Offset = 0;
+            Bit = 0;
             encoding = Encoding.UTF8;
             AutoIncreaseStream = false;
         }
@@ -85,8 +85,8 @@ namespace BitStreams
             this.stream = new MemoryStream();
             stream.CopyTo(this.stream);
             this.MSB = MSB;
-            offset = 0;
-            bit = 0;
+            Offset = 0;
+            Bit = 0;
             this.encoding = encoding;
             AutoIncreaseStream = false;
         }
@@ -102,8 +102,8 @@ namespace BitStreams
             MemoryStream m = new MemoryStream(buffer);
             m.CopyTo(this.stream);
             this.MSB = MSB;
-            offset = 0;
-            bit = 0;
+            Offset = 0;
+            Bit = 0;
             encoding = Encoding.UTF8;
             AutoIncreaseStream = false;
         }
@@ -120,8 +120,8 @@ namespace BitStreams
             MemoryStream m = new MemoryStream(buffer);
             m.CopyTo(this.stream);
             this.MSB = MSB;
-            offset = 0;
-            bit = 0;
+            Offset = 0;
+            Bit = 0;
             this.encoding = encoding;
             AutoIncreaseStream = false;
         }
@@ -175,11 +175,11 @@ namespace BitStreams
         #region Methods
 
         /// <summary>
-        /// Seek to the specified offset and check if it is a valid position for reading in the stream
+        /// Seek to the specified Offset and check if it is a valid position for reading in the stream
         /// </summary>
-        /// <param name="offset">offset on the stream</param>
-        /// <param name="bit">bit position</param>
-        /// <returns>true if offset is valid to do reading, false otherwise</returns>
+        /// <param name="offset">Offset on the stream</param>
+        /// <param name="bit">Bit position</param>
+        /// <returns>true if Offset is valid to do reading, false otherwise</returns>
         public bool this[long offset, int bit]
         {
             get
@@ -188,27 +188,27 @@ namespace BitStreams
                 return ValidPosition;
             }
             //set {
-            //    Seek(offset, bit);
+            //    Seek(Offset, Bit);
             //}
             private set { }
         }
 
         /// <summary>
-        /// Seek through the stream selecting the offset and bit using <see cref="SeekOrigin.Begin"/>
+        /// Seek through the stream selecting the Offset and Bit using <see cref="SeekOrigin.Begin"/>
         /// </summary>
-        /// <param name="offset">offset on the stream</param>
-        /// <param name="bit">bit position</param>
+        /// <param name="offset">Offset on the stream</param>
+        /// <param name="bit">Bit position</param>
         public void Seek(long offset, int bit)
         {
             if (offset > Length)
             {
-                this.offset = Length;
+                this.Offset = Length;
             }
             else
             {
                 if (offset >= 0)
                 {
-                    this.offset = offset;
+                    this.Offset = offset;
                 }
                 else
                 {
@@ -218,41 +218,41 @@ namespace BitStreams
             if (bit >= 8)
             {
                 int n = (int)(bit / 8);
-                this.offset += n;
-                this.bit = bit % 8;
+                this.Offset += n;
+                this.Bit = bit % 8;
             }
             else
             {
-                this.bit = bit;
+                this.Bit = bit;
             }
             stream.Seek(offset, SeekOrigin.Begin);
         }
 
         /// <summary>
-        /// Advances the stream by one bit
+        /// Advances the stream by one Bit
         /// </summary>
         public void AdvanceBit()
         {
-            bit = (bit + 1) % 8;
-            if (bit == 0)
+            Bit = (Bit + 1) % 8;
+            if (Bit == 0)
             {
-                offset++;
+                Offset++;
             }
         }
 
         /// <summary>
-        /// Returns the stream by one bit
+        /// Returns the stream by one Bit
         /// </summary>
         public void ReturnBit()
         {
-            bit = ((bit - 1) == -1 ? 7 : bit - 1);
-            if (bit == 7)
+            Bit = ((Bit - 1) == -1 ? 7 : Bit - 1);
+            if (Bit == 7)
             {
-                offset--;
+                Offset--;
             }
-            if(offset < 0)
+            if(Offset < 0)
             {
-                offset = 0;
+                Offset = 0;
             }
         }
 
@@ -274,9 +274,72 @@ namespace BitStreams
             stream.Seek(0, SeekOrigin.Begin);
             MemoryStream s = new MemoryStream();
             stream.CopyTo(s);
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             return s.ToArray();
         }
+
+        /// <summary>
+        /// Get the stream data as a byte[] from current offset to the end
+        /// </summary>
+        /// <returns>Stream as byte[]</returns>
+        public byte[] GetStreamDataFromCurrentOffsetAndBit()
+        {
+            var offset = Offset;
+            var bit = Bit;
+
+            var bits = ReadBits(int.MaxValue);
+            
+            Seek(offset, bit);
+
+            return BitArrayToBytes(bits);
+        }
+
+        public byte[] GetStreamDataBetween(long offsetStart, int bitStart, long offsetEnd, int bitEnd)
+        {
+            var length = (offsetEnd - offsetStart) * 8 + (bitStart == 0 ? 0 : 8 - bitStart) + bitEnd;
+            
+            var offset = Offset;
+            var bit = Bit;
+
+            Seek(offsetStart, bitStart);
+            var bits = ReadBits(length);
+            
+            Seek(offset, bit);
+
+            return BitArrayToBytes(bits);
+        }
+
+        public static byte[] BitArrayToBytes(Bit[] bits)
+        {
+            if (bits == null || bits.Length == 0)
+            {
+                return new byte[] { };
+            }
+            var result = new List<byte>();
+            var curr = 0;
+
+            while (curr < bits.Length - 8)
+            {
+                var val = 0;
+                for (var i = curr + 7; i >= curr; i--)
+                {
+                    val <<= 1;
+                    val += bits[i];
+                }
+                result.Add((byte) val);
+                curr += 8;
+            }
+            var valEnd = 0;
+            for (var i = bits.Length - 1; i >= curr; i--)
+            {
+                valEnd <<= 1;
+                valEnd += bits[i];
+            }
+            result.Add((byte) valEnd);
+
+            return result.ToArray();
+        }
+
 
         /// <summary>
         /// Get the <see cref="Encoding"/> used for chars and strings
@@ -315,7 +378,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Cuts the <see cref="BitStream"/> from the specified offset and given length, will throw an exception when length + offset is higher than stream's length, offset and bit will be set to 0
+        /// Cuts the <see cref="BitStream"/> from the specified Offset and given length, will throw an exception when length + Offset is higher than stream's length, Offset and Bit will be set to 0
         /// </summary>
         /// <param name="offset">Offset to start</param>
         /// <param name="length">Length of the new <see cref="BitStream"/></param>
@@ -328,8 +391,8 @@ namespace BitStreams
             MemoryStream m = new MemoryStream(buffer);
             this.stream = new MemoryStream();
             m.CopyTo(this.stream);
-            this.offset = 0;
-            bit = 0;
+            this.Offset = 0;
+            Bit = 0;
         }
 
         /// <summary>
@@ -388,14 +451,14 @@ namespace BitStreams
 
 
         /// <summary>
-        /// Checks if the <see cref="BitStream"/> will be in a valid position on its last bit read/write
+        /// Checks if the <see cref="BitStream"/> will be in a valid position on its last Bit read/write
         /// </summary>
         /// <param name="bits">Number of bits it will advance</param>
         /// <returns>true if <see cref="BitStream"/> will be inside the stream length</returns>
-        private bool ValidPositionWhen(int bits)
+        public bool ValidPositionWhen(int bits)
         {
-            long o = offset;
-            int b = bit;
+            long o = Offset;
+            int b = Bit;
             b = (b + 1) % 8;
             if (b == 0)
             {
@@ -410,27 +473,27 @@ namespace BitStreams
         #region BitRead/Write
 
         /// <summary>
-        /// Read current position bit and advances the position within the stream by one bit
+        /// Read current position Bit and advances the position within the stream by one Bit
         /// </summary>
-        /// <returns>Returns the current position bit as 0 or 1</returns>
+        /// <returns>Returns the current position Bit as 0 or 1</returns>
         public Bit ReadBit()
         {
             if (!ValidPosition)
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            stream.Seek(offset, SeekOrigin.Begin);
+            stream.Seek(Offset, SeekOrigin.Begin);
             byte value;
             if (!MSB)
             {
-                value = (byte)((stream.ReadByte() >> (bit)) & 1);
+                value = (byte)((stream.ReadByte() >> (Bit)) & 1);
             }
             else
             {
-                value = (byte)((stream.ReadByte() >> (7 - bit)) & 1);
+                value = (byte)((stream.ReadByte() >> (7 - Bit)) & 1);
             }
             AdvanceBit();
-            stream.Seek(offset, SeekOrigin.Begin);
+            stream.Seek(Offset, SeekOrigin.Begin);
             return value;
         }
 
@@ -438,35 +501,40 @@ namespace BitStreams
         /// Read from current position the specified number of bits
         /// </summary>
         /// <param name="length">Bits to read</param>
-        /// <returns><see cref="Bit"/>[] containing read bits</returns>
-        public Bit[] ReadBits(int length)
+        /// <param name="readToEndIfTooLong">If true, will read every available Bit up to length</param>
+        /// <returns><see cref="BitStreams.Bit"/>[] containing read bits</returns>
+        public Bit[] ReadBits(long length, bool readToEndIfTooLong = true)
         {
-            Bit[] bits = new Bit[length];
-            for(int i=0;i< length; i++)
+            var bits = new List<Bit>();
+            for(long i=0;i< length; i++)
             {
-                bits[i] = ReadBit();
+                if (readToEndIfTooLong && !ValidPosition)
+                {
+                    return bits.ToArray();
+                }
+                bits.Add(ReadBit());
             }
-            return bits;
+            return bits.ToArray();
         }
 
         /// <summary>
-        /// Writes a bit in the current position
+        /// Writes a Bit in the current position
         /// </summary>
         /// <param name="data">Bit to write, it data is not 0 or 1 data = data & 1</param>
         public void WriteBit(Bit data)
         {
-            stream.Seek(offset, SeekOrigin.Begin);
+            stream.Seek(Offset, SeekOrigin.Begin);
             byte value = (byte)stream.ReadByte();
-            stream.Seek(offset, SeekOrigin.Begin);
+            stream.Seek(Offset, SeekOrigin.Begin);
             if (!MSB)
             {
-                value &= (byte)~(1 << bit);
-                value |= (byte)(data << bit);
+                value &= (byte)~(1 << Bit);
+                value |= (byte)(data << Bit);
             }
             else
             {
-                value &= (byte)~(1 << (7 - bit));
-                value |= (byte)(data << (7 - bit));
+                value &= (byte)~(1 << (7 - Bit));
+                value |= (byte)(data << (7 - Bit));
             }
             if (ValidPosition)
             {
@@ -476,28 +544,28 @@ namespace BitStreams
             {
                 if (AutoIncreaseStream)
                 {
-                    if (ChangeLength(Length + (offset - Length) + 1))
+                    if (ChangeLength(Length + (Offset - Length) + 1))
                     {
                         stream.WriteByte(value);
                     }
                     else
                     {
-                        throw new IOException("Cannot write in an offset bigger than the length of the stream");
+                        throw new IOException("Cannot write in an Offset bigger than the length of the stream");
                     }
                 }
                 else
                 {
-                    throw new IOException("Cannot write in an offset bigger than the length of the stream");
+                    throw new IOException("Cannot write in an Offset bigger than the length of the stream");
                 }
             }
             AdvanceBit();
-            stream.Seek(offset, SeekOrigin.Begin);
+            stream.Seek(Offset, SeekOrigin.Begin);
         }
 
         /// <summary>
         /// Write a sequence of bits into the stream
         /// </summary>
-        /// <param name="bits"><see cref="Bit"/>[] to write</param>
+        /// <param name="bits"><see cref="BitStreams.Bit"/>[] to write</param>
         public void WriteBits(ICollection<Bit> bits)
         {
             foreach(Bit b in bits)
@@ -509,7 +577,7 @@ namespace BitStreams
         /// <summary>
         /// Write a sequence of bits into the stream
         /// </summary>
-        /// <param name="bits"><see cref="Bit"/>[] to write</param>
+        /// <param name="bits"><see cref="BitStreams.Bit"/>[] to write</param>
         /// <param name="length">Number of bits to write</param>
         public void WriteBits(ICollection<Bit> bits, int length)
         {
@@ -524,8 +592,8 @@ namespace BitStreams
         /// <summary>
         /// Write a sequence of bits into the stream
         /// </summary>
-        /// <param name="bits"><see cref="Bit"/>[] to write</param>
-        /// <param name="offset">Offset to begin bit writing</param>
+        /// <param name="bits"><see cref="BitStreams.Bit"/>[] to write</param>
+        /// <param name="offset">Offset to begin Bit writing</param>
         /// <param name="length">Number of bits to write</param>
         public void WriteBits(Bit[] bits, int offset, int length)
         {
@@ -540,7 +608,7 @@ namespace BitStreams
         #region Read
 
         /// <summary>
-        /// Read from the current position bit the specified number of bits or bytes and creates a byte[] 
+        /// Read from the current position Bit the specified number of bits or bytes and creates a byte[] 
         /// </summary>
         /// <param name="length">Number of bits or bytes</param>
         /// <param name="isBytes">if true will consider length as byte length, if false it will count the specified length of bits</param>
@@ -572,7 +640,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a byte based on the current stream and bit position
+        /// Read a byte based on the current stream and Bit position
         /// </summary>
         public byte ReadByte()
         {
@@ -596,7 +664,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a signed byte based on the current stream and bit position
+        /// Read a signed byte based on the current stream and Bit position
         /// </summary>
         public sbyte ReadSByte()
         {
@@ -620,7 +688,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a byte based on the current stream and bit position and check if it is 0
+        /// Read a byte based on the current stream and Bit position and check if it is 0
         /// </summary>
         public bool ReadBool()
         {
@@ -628,7 +696,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a char based on the current stream and bit position and the <see cref="BitStream"/> encoding
+        /// Read a char based on the current stream and Bit position and the <see cref="BitStream"/> encoding
         /// </summary>
         public char ReadChar()
         {
@@ -636,7 +704,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a string based on the current stream and bit position and the <see cref="BitStream"/> encoding
+        /// Read a string based on the current stream and Bit position and the <see cref="BitStream"/> encoding
         /// </summary>
         /// <param name="length">Length of the string to read</param>
         public string ReadString(int length)
@@ -646,7 +714,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a short based on the current stream and bit position
+        /// Read a short based on the current stream and Bit position
         /// </summary>
         public short ReadInt16()
         {
@@ -655,7 +723,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a 24bit value based on the current stream and bit position
+        /// Read a 24bit value based on the current stream and Bit position
         /// </summary>
         public Int24 ReadInt24()
         {
@@ -666,7 +734,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read an int based on the current stream and bit position
+        /// Read an int based on the current stream and Bit position
         /// </summary>
         public int ReadInt32()
         {
@@ -675,7 +743,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a 48bit value based on the current stream and bit position
+        /// Read a 48bit value based on the current stream and Bit position
         /// </summary>
         public Int48 ReadInt48()
         {
@@ -686,7 +754,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a long based on the current stream and bit position
+        /// Read a long based on the current stream and Bit position
         /// </summary>
         public long ReadInt64()
         {
@@ -695,7 +763,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read a ushort based on the current stream and bit position
+        /// Read a ushort based on the current stream and Bit position
         /// </summary>
         public ushort ReadUInt16()
         {
@@ -704,7 +772,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read an unsigned 24bit value based on the current stream and bit position
+        /// Read an unsigned 24bit value based on the current stream and Bit position
         /// </summary>
         public UInt24 ReadUInt24()
         {
@@ -715,7 +783,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read an uint based on the current stream and bit position
+        /// Read an uint based on the current stream and Bit position
         /// </summary>
         public uint ReadUInt32()
         {
@@ -724,7 +792,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read an unsigned 48bit value based on the current stream and bit position
+        /// Read an unsigned 48bit value based on the current stream and Bit position
         /// </summary>
         public UInt48 ReadUInt48()
         {
@@ -735,7 +803,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Read an ulong based on the current stream and bit position
+        /// Read an ulong based on the current stream and Bit position
         /// </summary>
         public ulong ReadUInt64()
         {
@@ -780,7 +848,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a byte value based on the current stream and bit position
+        /// Write a byte value based on the current stream and Bit position
         /// </summary>
         public void WriteByte(byte value)
         {
@@ -788,7 +856,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a byte value based on the current stream and bit position
+        /// Write a byte value based on the current stream and Bit position
         /// </summary>
         public void WriteByte(byte value, int bits)
         {
@@ -804,7 +872,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a byte value based on the current stream and bit position
+        /// Write a byte value based on the current stream and Bit position
         /// </summary>
         public void WriteSByte(sbyte value)
         {
@@ -812,7 +880,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a byte value based on the current stream and bit position
+        /// Write a byte value based on the current stream and Bit position
         /// </summary>
         public void WriteSByte(sbyte value, int bits)
         {
@@ -828,7 +896,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a bool value as 0:false, 1:true as byte based on the current stream and bit position
+        /// Write a bool value as 0:false, 1:true as byte based on the current stream and Bit position
         /// </summary>
         public void WriteBool(bool value)
         {
@@ -854,7 +922,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a short value based on the current stream and bit position
+        /// Write a short value based on the current stream and Bit position
         /// </summary>
         public void WriteInt16(short value)
         {
@@ -862,7 +930,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a 24bit value based on the current stream and bit position
+        /// Write a 24bit value based on the current stream and Bit position
         /// </summary>
         public void WriteInt24(Int24 value)
         {
@@ -870,7 +938,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write an int value based on the current stream and bit position
+        /// Write an int value based on the current stream and Bit position
         /// </summary>
         public void WriteInt32(int value)
         {
@@ -878,7 +946,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a 48bit value based on the current stream and bit position
+        /// Write a 48bit value based on the current stream and Bit position
         /// </summary>
         public void WriteInt48(Int48 value)
         {
@@ -886,7 +954,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write a long value based on the current stream and bit position
+        /// Write a long value based on the current stream and Bit position
         /// </summary>
         public void WriteInt64(long value)
         {
@@ -894,7 +962,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write an ushort value based on the current stream and bit position
+        /// Write an ushort value based on the current stream and Bit position
         /// </summary>
         public void WriteUInt16(ushort value)
         {
@@ -902,7 +970,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write an unsigned 24bit value based on the current stream and bit position
+        /// Write an unsigned 24bit value based on the current stream and Bit position
         /// </summary>
         public void WriteUInt24(UInt24 value)
         {
@@ -910,7 +978,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write an uint value based on the current stream and bit position
+        /// Write an uint value based on the current stream and Bit position
         /// </summary>
         public void WriteUInt32(uint value)
         {
@@ -918,7 +986,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write an unsigned 48bit value based on the current stream and bit position
+        /// Write an unsigned 48bit value based on the current stream and Bit position
         /// </summary>
         public void WriteUInt48(UInt48 value)
         {
@@ -926,7 +994,7 @@ namespace BitStreams
         }
 
         /// <summary>
-        /// Write an ulong value based on the current stream and bit position
+        /// Write an ulong value based on the current stream and Bit position
         /// </summary>
         public void WriteUInt64(ulong value)
         {
@@ -938,7 +1006,7 @@ namespace BitStreams
         #region Shifts
 
         /// <summary>
-        /// Do a bitwise shift on the current position of the stream on bit 0
+        /// Do a bitwise shift on the current position of the stream on Bit 0
         /// </summary>
         /// <param name="bits">bits to shift</param>
         /// <param name="leftShift">true to left shift, false to right shift</param>
@@ -946,9 +1014,9 @@ namespace BitStreams
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, 0);
+            Seek(Offset, 0);
             if (bits != 0 && bits <= 7)
             {
                 byte value = (byte)stream.ReadByte();
@@ -960,15 +1028,15 @@ namespace BitStreams
                 {
                     value = (byte)(value >> bits);
                 }
-                Seek(offset, 0);
+                Seek(Offset, 0);
                 stream.WriteByte(value);
             }
-            bit = 0;
-            offset++;
+            Bit = 0;
+            Offset++;
         }
 
         /// <summary>
-        /// Do a bitwise shift on the current position of the stream on current bit
+        /// Do a bitwise shift on the current position of the stream on current Bit
         /// </summary>
         /// <param name="bits">bits to shift</param>
         /// <param name="leftShift">true to left shift, false to right shift</param>
@@ -976,9 +1044,9 @@ namespace BitStreams
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             if (bits != 0 && bits <= 7)
             {
                 byte value = ReadByte();
@@ -990,15 +1058,15 @@ namespace BitStreams
                 {
                     value = (byte)(value >> bits);
                 }
-                offset--;
-                Seek(offset, bit);
+                Offset--;
+                Seek(Offset, Bit);
                 WriteByte(value);
             }
-            offset++;
+            Offset++;
         }
 
         /// <summary>
-        /// Do a circular shift on the current position of the stream on bit 0
+        /// Do a circular shift on the current position of the stream on Bit 0
         /// </summary>
         /// <param name="bits">bits to shift</param>
         /// <param name="leftShift">true to left shift, false to right shift</param>
@@ -1006,9 +1074,9 @@ namespace BitStreams
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, 0);
+            Seek(Offset, 0);
             if (bits != 0 && bits <= 7)
             {
                 byte value = (byte)stream.ReadByte();
@@ -1020,15 +1088,15 @@ namespace BitStreams
                 {
                     value = (byte)(value >> bits | value << (8 - bits));
                 }
-                Seek(offset, 0);
+                Seek(Offset, 0);
                 stream.WriteByte(value);
             }
-            bit = 0;
-            offset++;
+            Bit = 0;
+            Offset++;
         }
 
         /// <summary>
-        /// Do a circular shift on the current position of the stream on current bit
+        /// Do a circular shift on the current position of the stream on current Bit
         /// </summary>
         /// <param name="bits">bits to shift</param>
         /// <param name="leftShift">true to left shift, false to right shift</param>
@@ -1036,9 +1104,9 @@ namespace BitStreams
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             if (bits != 0 && bits <= 7)
             {
                 byte value = ReadByte();
@@ -1050,11 +1118,11 @@ namespace BitStreams
                 {
                     value = (byte)(value >> bits | value << (8 - bits));
                 }
-                offset--;
-                Seek(offset, bit);
+                Offset--;
+                Seek(Offset, Bit);
                 WriteByte(value);
             }
-            offset++;
+            Offset++;
         }
 
         #endregion
@@ -1062,148 +1130,148 @@ namespace BitStreams
         #region Bitwise Operators
 
         /// <summary>
-        /// Apply an and operator on the current stream and bit position byte and advances one byte position
+        /// Apply an and operator on the current stream and Bit position byte and advances one byte position
         /// </summary>
         /// <param name="x">Byte value to apply and</param>
         public void And(byte x)
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             byte value = ReadByte();
-            offset--;
-            Seek(offset, bit);
+            Offset--;
+            Seek(Offset, Bit);
             WriteByte((byte)(value & x));
         }
 
         /// <summary>
-        /// Apply an or operator on the current stream and bit position byte and advances one byte position
+        /// Apply an or operator on the current stream and Bit position byte and advances one byte position
         /// </summary>
         /// <param name="x">Byte value to apply or</param>
         public void Or(byte x)
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             byte value = ReadByte();
-            offset--;
-            Seek(offset, bit);
+            Offset--;
+            Seek(Offset, Bit);
             WriteByte((byte)(value | x));
         }
 
         /// <summary>
-        /// Apply a xor operator on the current stream and bit position byte and advances one byte position
+        /// Apply a xor operator on the current stream and Bit position byte and advances one byte position
         /// </summary>
         /// <param name="x">Byte value to apply xor</param>
         public void Xor(byte x)
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             byte value = ReadByte();
-            offset--;
-            Seek(offset, bit);
+            Offset--;
+            Seek(Offset, Bit);
             WriteByte((byte)(value ^ x));
         }
 
         /// <summary>
-        /// Apply a not operator on the current stream and bit position byte and advances one byte position
+        /// Apply a not operator on the current stream and Bit position byte and advances one byte position
         /// </summary>
         public void Not()
         {
             if (!ValidPositionWhen(8))
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             byte value = ReadByte();
-            offset--;
-            Seek(offset, bit);
+            Offset--;
+            Seek(Offset, Bit);
             WriteByte((byte)(~value));
         }
 
         /// <summary>
-        /// Apply an and operator on the current stream and bit position and advances one bit position
+        /// Apply an and operator on the current stream and Bit position and advances one Bit position
         /// </summary>
         /// <param name="bit">Bit value to apply and</param>
         public void BitAnd(Bit x)
         {
             if (!ValidPosition)
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             Bit value = ReadBit();
             ReturnBit();
             WriteBit(x & value);
         }
 
         /// <summary>
-        /// Apply an or operator on the current stream and bit position and advances one bit position
+        /// Apply an or operator on the current stream and Bit position and advances one Bit position
         /// </summary>
         /// <param name="bit">Bit value to apply or</param>
         public void BitOr(Bit x)
         {
             if (!ValidPosition)
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             Bit value = ReadBit();
             ReturnBit();
             WriteBit(x | value);
         }
 
         /// <summary>
-        /// Apply a xor operator on the current stream and bit position and advances one bit position
+        /// Apply a xor operator on the current stream and Bit position and advances one Bit position
         /// </summary>
         /// <param name="bit">Bit value to apply xor</param>
         public void BitXor(Bit x)
         {
             if (!ValidPosition)
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             Bit value = ReadBit();
             ReturnBit();
             WriteBit(x ^ value);
         }
 
         /// <summary>
-        /// Apply a not operator on the current stream and bit position and advances one bit position
+        /// Apply a not operator on the current stream and Bit position and advances one Bit position
         /// </summary>
         public void BitNot()
         {
             if (!ValidPosition)
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, bit);
+            Seek(Offset, Bit);
             Bit value = ReadBit();
             ReturnBit();
             WriteBit(~value);
         }
 
         /// <summary>
-        /// Reverses the bit order on the byte in the current position of the stream
+        /// Reverses the Bit order on the byte in the current position of the stream
         /// </summary>
         public void ReverseBits()
         {
             if (!ValidPosition)
             {
-                throw new IOException("Cannot read in an offset bigger than the length of the stream");
+                throw new IOException("Cannot read in an Offset bigger than the length of the stream");
             }
-            Seek(offset, 0);
+            Seek(Offset, 0);
             byte value = ReadByte();
-            offset--;
-            Seek(offset, 0);
+            Offset--;
+            Seek(Offset, 0);
             WriteByte(value.ReverseBits());
         }
 
