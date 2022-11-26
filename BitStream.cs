@@ -622,9 +622,31 @@ namespace BitStreams
             List<byte> data = new List<byte>();
             for (long i = 0; i < length;)
             {
+                if (!ValidPosition)
+                {
+                    for (var t = data.Count; t <= (length - 1) / 8; t++)
+                    {
+                        data.Add(0);
+                    }
+
+                    return data.ToArray();
+                }
                 byte value = 0;
                 for (int p = 0; p < 8 && i < length; i++, p++)
                 {
+                    if (!ValidPosition)
+                    {
+                        if (p != 0)
+                        {
+                            data.Add(value);
+                        }
+                        for (var t = data.Count; t <= (length - 1) / 8; t++)
+                        {
+                            data.Add(0);
+                        }
+                        return data.ToArray();
+                    }
+
                     if (!MSB)
                     {
                         value |= (byte)(ReadBit() << p);
@@ -692,7 +714,7 @@ namespace BitStreams
         /// </summary>
         public bool ReadBool()
         {
-            return ReadBytes(8)[0] == 0 ? false : true;
+            return ReadBytes(8)[0] != 0;
         }
 
         /// <summary>
@@ -767,7 +789,13 @@ namespace BitStreams
         /// </summary>
         public ushort ReadUInt16()
         {
-            ushort value = BitConverter.ToUInt16(ReadBytes(16), 0);
+            var bytes = ReadBytes(16);
+
+            if (bytes.Length == 1)
+            {
+                bytes = new byte[] { 0, bytes[0] };
+            }
+            ushort value = BitConverter.ToUInt16(bytes, 0);
             return value;
         }
 
