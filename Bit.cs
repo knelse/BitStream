@@ -10,7 +10,7 @@ namespace BitStreams
     {
         private byte value;
 
-        private Bit(int value)
+        public Bit(int value)
         {
             this.value = (byte)(value & 1);
         }
