@@ -875,6 +875,11 @@ namespace BitStreams
             }
         }
 
+        public void WriteBytes(byte[] data)
+        {
+            WriteBytes(data, data.Length, true);
+        }
+
         /// <summary>
         /// Write a byte value based on the current stream and Bit position
         /// </summary>
